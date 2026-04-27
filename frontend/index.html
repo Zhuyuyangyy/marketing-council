@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>营销决策辩论团 - MarketingCouncil</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-dark: #0a0e1a;
+      --bg-card: #111827;
+      --bg-card-hover: #1a2235;
+      --accent-blue: #3b82f6;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --accent-yellow: #f59e0b;
+      --accent-purple: #8b5cf6;
+      --accent-pink: #ec4899;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --border: #1e293b;
+      --font: 'Noto Sans SC', -apple-system, sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Hero Section */
+    .hero {
+      text-align: center;
+      padding: 60px 20px 40px;
+      background: linear-gradient(180deg, rgba(59,130,246,0.08) 0%, transparent 100%);
+      border-bottom: 1px solid var(--border);
+    }
+    .hero h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+    .hero p {
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: rgba(59,130,246,0.15);
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 20px;
+      font-size: 0.8rem;
+      color: var(--accent-blue);
+      margin-top: 12px;
+    }
+
+    /* Main Layout */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 30px 20px;
+    }
+
+    /* Input Section */
+    .input-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 30px;
+    }
+    .input-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+    .topic-input {
+      width: 100%;
+      padding: 14px 18px;
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-size: 1rem;
+      font-family: var(--font);
+      resize: vertical;
+      min-height: 80px;
+      transition: border-color 0.2s;
+    }
+    .topic-input:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+    }
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .btn {
+      padding: 10px 24px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      font-family: var(--font);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: white;
+    }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-secondary {
+      background: var(--bg-dark);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+
+    /* Agent Cards Grid */
+    .agents-intro {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+      margin-bottom: 30px;
+    }
+    .agent-intro-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+    .agent-intro-card .emoji {
+      font-size: 1.8rem;
+      margin-bottom: 6px;
+    }
+    .agent-intro-card .role {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+    .agent-intro-card .round-tag {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: rgba(59,130,246,0.1);
+      color: var(--accent-blue);
+    }
+
+    /* Debate Progress */
+    .debate-stage {
+      margin-bottom: 30px;
+    }
+    .stage-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .stage-badge {
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .stage-badge.r1 { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+    .stage-badge.r2 { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
+    .stage-badge.r3 { background: rgba(236,72,153,0.15); color: var(--accent-pink); }
+    .stage-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    /* Agent Result Cards */
+    .agent-results {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .result-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+    .result-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+    .result-card.opp::before { background: linear-gradient(90deg, #3b82f6, #10b981); }
+    .result-card.risk::before { background: linear-gradient(90deg, #ef4444, #f59e0b); }
+    .result-card.proscons::before { background: linear-gradient(90deg, #10b981, #3b82f6); }
+    .result-card.devil::before { background: linear-gradient(90deg, #8b5cf6, #ec4899); }
+    .result-card.comp::before { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+    .result-card.synth::before { background: linear-gradient(90deg, #ec4899, #8b5cf6); }
+
+    .result-card:hover {
+      border-color: rgba(59,130,246,0.3);
+      background: var(--bg-card-hover);
+    }
+    .result-card.streaming {
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { border-color: var(--border); }
+      50% { border-color: rgba(59,130,246,0.5); }
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .card-role {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .card-badge {
+      font-size: 0.7rem;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+    .badge-run { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+    .badge-done { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+
+    .score-display {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: var(--bg-dark);
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .score-num {
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+    .score-num.green { color: var(--accent-green); }
+    .score-num.red { color: var(--accent-red); }
+    .score-num.yellow { color: var(--accent-yellow); }
+    .score-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .result-content {
+      font-size: 0.88rem;
+      line-height: 1.7;
+      color: var(--text-secondary);
+    }
+    .result-content ul {
+      padding-left: 16px;
+    }
+    .result-content li {
+      margin-bottom: 4px;
+    }
+
+    /* Final Decision Card */
+    .final-decision {
+      background: linear-gradient(135deg, rgba(139,92,246,0.08), rgba(236,72,153,0.08));
+      border: 1px solid rgba(139,92,246,0.3);
+      border-radius: 20px;
+      padding: 32px;
+      text-align: center;
+    }
+    .decision-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+    .decision-value {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+    .decision-value.go { color: var(--accent-green); }
+    .decision-value.cond-go { color: var(--accent-yellow); }
+    .decision-value.hold { color: var(--accent-blue); }
+    .decision-value.stop { color: var(--accent-red); }
+
+    .confidence-bar-wrap {
+      max-width: 300px;
+      margin: 16px auto;
+      text-align: center;
+    }
+    .confidence-label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .confidence-bar {
+      height: 8px;
+      background: var(--bg-dark);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .confidence-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 1s ease;
+    }
+    .confidence-fill.high { background: linear-gradient(90deg, #10b981, #3b82f6); }
+    .confidence-fill.med { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+    .confidence-fill.low { background: #ef4444; }
+
+    .decision-conditions, .decision-concerns, .decision-steps {
+      text-align: left;
+      margin-top: 20px;
+      padding: 16px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 10px;
+    }
+    .section-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .section-title span { color: var(--accent-purple); }
+    .decision-conditions ul, .decision-concerns ul, .decision-steps ul {
+      padding-left: 16px;
+    }
+    .decision-conditions li, .decision-concerns li, .decision-steps li {
+      font-size: 0.88rem;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+      line-height: 1.5;
+    }
+
+    /* Disclaimer */
+    .disclaimer {
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      padding: 20px;
+      border-top: 1px solid var(--border);
+      margin-top: 30px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 1.7rem; }
+      .agent-results { grid-template-columns: 1fr; }
+      .agents-intro { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- Hero -->
+  <div class="hero">
+    <h1>🏛️ 营销决策辩论团</h1>
+    <p>Multi-Agent Strategic Marketing Debate System</p>
+    <span class="badge">6 Agents · 3 Rounds · Real-time Analysis</span>
+  </div>
+
+  <div class="container">
+    <!-- Agent Introduction -->
+    <div class="agents-intro">
+      <div class="agent-intro-card">
+        <div class="emoji">🎯</div>
+        <div class="role">机会分析师</div>
+        <span class="round-tag">Round 1</span>
+      </div>
+      <div class="agent-intro-card">
+        <div class="emoji">⚠️</div>
+        <div class="role">风险控制官</div>
+        <span class="round-tag">Round 1</span>
+      </div>
+      <div class="agent-intro-card">
+        <div class="emoji">⚖️</div>
+        <div class="role">优缺点分析师</div>
+        <span class="round-tag">Round 1</span>
+      </div>
+      <div class="agent-intro-card">
+        <div class="emoji">📊</div>
+        <div class="role">竞品环境分析师</div>
+        <span class="round-tag">Round 1</span>
+      </div>
+      <div class="agent-intro-card">
+        <div class="emoji">😈</div>
+        <div class="role">反向思考师</div>
+        <span class="round-tag">Round 2</span>
+      </div>
+      <div class="agent-intro-card">
+        <div class="emoji">🏛️</div>
+        <div class="role">策略综合官</div>
+        <span class="round-tag">Round 3</span>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="input-section">
+      <div class="input-label">输入你的营销方案/决策问题</div>
+      <textarea
+        class="topic-input"
+        v-model="topic"
+        placeholder="例如：在一二线城市推广一款新锐咖啡品牌，主打年轻白领市场，预算100万，周期3个月..."
+      ></textarea>
+      <div class="btn-row">
+        <button class="btn btn-primary" @click="startDebate" :disabled="isRunning || !topic.trim()">
+          {{ isRunning ? '🤖 分析中...' : '🚀 开始辩论' }}
+        </button>
+        <button class="btn btn-secondary" @click="loadDemo">📋 演示模式</button>
+      </div>
+    </div>
+
+    <!-- Debate Results -->
+    <div v-if="debateResult || currentRound > 0">
+      <!-- Round 1 -->
+      <div class="debate-stage" v-if="agentStatus.r1_opp || agentStatus.r1_risk || agentStatus.r1_proscons || agentStatus.r1_comp">
+        <div class="stage-header">
+          <span class="stage-badge r1">Round 1</span>
+          <span class="stage-title">5位专家并行独立分析</span>
+        </div>
+        <div class="agent-results">
+          <!-- Opportunity Analyst -->
+          <div class="result-card opp" :class="{streaming: agentStatus.r1_opp === 'running'}">
+            <div class="card-header">
+              <span class="card-role">🎯 机会分析师</span>
+              <span class="card-badge" :class="agentStatus.r1_opp === 'done' ? 'badge-done' : 'badge-run'">
+                {{ agentStatus.r1_opp === 'done' ? '✓' : '⚡' }}
+              </span>
+            </div>
+            <div v-if="round1Data.opportunity_analyst">
+              <div class="score-display">
+                <span class="score-num green">{{ round1Data.opportunity_analyst.opportunity_score || '-' }}</span>
+                <span class="score-label">/100 机会评分</span>
+              </div>
+              <div class="result-content" v-if="round1Data.opportunity_analyst.opportunity_points">
+                <ul>
+                  <li v-for="(p, i) in round1Data.opportunity_analyst.opportunity_points" :key="i">{{ p }}</li>
+                </ul>
+              </div>
+              <div class="result-content" style="margin-top:8px;color:#94a3b8;font-size:0.82rem">
+                📅 窗口期：{{ round1Data.opportunity_analyst.window_period || '待评估' }}<br>
+                🎯 市场：{{ round1Data.opportunity_analyst.market_size || '待估算' }}
+              </div>
+            </div>
+            <div v-else-if="agentStatus.r1_opp === 'running'" style="color:#94a3b8;font-size:0.85rem">分析中...</div>
+          </div>
+
+          <!-- Risk Controller -->
+          <div class="result-card risk" :class="{streaming: agentStatus.r1_risk === 'running'}">
+            <div class="card-header">
+              <span class="card-role">⚠️ 风险控制官</span>
+              <span class="card-badge" :class="agentStatus.r1_risk === 'done' ? 'badge-done' : 'badge-run'">
+                {{ agentStatus.r1_risk === 'done' ? '✓' : '⚡' }}
+              </span>
+            </div>
+            <div v-if="round1Data.risk_controller">
+              <div class="score-display">
+                <span class="score-num" :class="riskScoreClass">{{ round1Data.risk_controller.risk_score || '-' }}</span>
+                <span class="score-label">/100 风险评分</span>
+              </div>
+              <div class="result-content" v-if="round1Data.risk_controller.risk_items">
+                <ul>
+                  <li v-for="(r, i) in (round1Data.risk_controller.risk_items || []).slice(0,3)" :key="i">
+                    <strong>{{ r.category }}</strong>：{{ r.impact }}
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div v-else-if="agentStatus.r1_risk === 'running'" style="color:#94a3b8;font-size:0.85rem">分析中...</div>
+          </div>
+
+          <!-- Pros/Cons -->
+          <div class="result-card proscons" :class="{streaming: agentStatus.r1_proscons === 'running'}">
+            <div class="card-header">
+              <span class="card-role">⚖️ 优缺点分析师</span>
+              <span class="card-badge" :class="agentStatus.r1_proscons === 'done' ? 'badge-done' : 'badge-run'">
+                {{ agentStatus.r1_proscons === 'done' ? '✓' : '⚡' }}
+              </span>
+            </div>
+            <div v-if="round1Data.proscons_analyst">
+              <div class="score-display">
+                <span class="score-num" :class="round1Data.proscons_analyst.net_score >= 0 ? 'green' : 'red'">
+                  {{ round1Data.proscons_analyst.net_score >= 0 ? '+' : '' }}{{ round1Data.proscons_analyst.net_score || '0' }}
+                </span>
+                <span class="score-label">净得分</span>
+              </div>
+              <div class="result-content">
+                <div v-if="round1Data.proscons_analyst.pros && round1Data.proscons_analyst.pros.length">
+                  <strong style="color:#10b981">✅ 优势</strong>：{{ round1Data.proscons_analyst.pros.map(p=>p.title||p).join('、') }}
+                </div>
+                <div v-if="round1Data.proscons_analyst.cons && round1Data.proscons_analyst.cons.length" style="margin-top:6px">
+                  <strong style="color:#ef4444">❌ 劣势</strong>：{{ round1Data.proscons_analyst.cons.map(c=>c.title||c).join('、') }}
+                </div>
+              </div>
+            </div>
+            <div v-else-if="agentStatus.r1_proscons === 'running'" style="color:#94a3b8;font-size:0.85rem">分析中...</div>
+          </div>
+
+          <!-- Competitive Analyst -->
+          <div class="result-card comp" :class="{streaming: agentStatus.r1_comp === 'running'}">
+            <div class="card-header">
+              <span class="card-role">📊 竞品环境分析师</span>
+              <span class="card-badge" :class="agentStatus.r1_comp === 'done' ? 'badge-done' : 'badge-run'">
+                {{ agentStatus.r1_comp === 'done' ? '✓' : '⚡' }}
+              </span>
+            </div>
+            <div v-if="round1Data.competitive_analyst">
+              <div class="result-content">
+                <div style="margin-bottom:8px">
+                  竞争强度：<strong :style="{color: competitiveColor}">{{ round1Data.competitive_analyst.competitive_intensity || '待评估' }}</strong>
+                </div>
+                <div v-if="round1Data.competitive_analyst.timing_assessment">
+                  时机评估：{{ round1Data.competitive_analyst.timing_assessment.window_status || '' }}
+                  <span v-if="round1Data.competitive_analyst.timing_assessment.window_closing_time" style="color:#94a3b8;font-size:0.8rem">
+                    （{{ round1Data.competitive_analyst.timing_assessment.window_closing_time }}后窗口关闭）
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div v-else-if="agentStatus.r1_comp === 'running'" style="color:#94a3b8;font-size:0.85rem">分析中...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Round 2 -->
+      <div class="debate-stage" v-if="round2Data && Object.keys(round2Data).length">
+        <div class="stage-header">
+          <span class="stage-badge r2">Round 2</span>
+          <span class="stage-title">😈 反向思考师交叉质疑</span>
+        </div>
+        <div class="agent-results">
+          <div class="result-card devil">
+            <div class="card-header">
+              <span class="card-role">😈 反向思考师</span>
+              <span class="card-badge badge-done">✓</span>
+            </div>
+            <div v-if="round2Data.devil_advocate">
+              <div class="result-content">
+                <div v-if="round2Data.devil_advocate.weakest_assumption" style="margin-bottom:8px">
+                  <strong style="color:#ec4899">💀 最脆弱假设：</strong>{{ round2Data.devil_advocate.weakest_assumption }}
+                </div>
+                <div v-if="round2Data.devil_advocate.challenges && round2Data.devil_advocate.challenges.length">
+                  <strong style="color:#f59e0b">⚡ 质疑问题：</strong>
+                  <ul>
+                    <li v-for="(c, i) in round2Data.devil_advocate.challenges" :key="i">{{ c.question }}</li>
+                  </ul>
+                </div>
+                <div v-if="round2Data.devil_advocate.probable_failure_reason" style="margin-top:8px;color:#ef4444;font-size:0.85rem">
+                  💥 最可能失败原因：{{ round2Data.devil_advocate.probable_failure_reason }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Final Decision -->
+      <div class="debate-stage" v-if="debateResult && debateResult.final_decision">
+        <div class="stage-header">
+          <span class="stage-badge r3">Round 3</span>
+          <span class="stage-title">🏛️ 策略综合官最终决策</span>
+        </div>
+        <div class="final-decision">
+          <div class="decision-label">最终决策</div>
+          <div class="decision-value" :class="decisionClass">
+            {{ debateResult.final_decision.decision || 'HOLD' }}
+          </div>
+
+          <div class="confidence-bar-wrap">
+            <div class="confidence-label">置信度 {{ debateResult.final_decision.confidence || 0 }}%</div>
+            <div class="confidence-bar">
+              <div class="confidence-fill" :class="confidenceClass"
+                :style="{width: (debateResult.final_decision.confidence || 0) + '%'}">
+              </div>
+            </div>
+          </div>
+
+          <div v-if="debateResult.final_decision.conditions && debateResult.final_decision.conditions.length" class="decision-conditions">
+            <div class="section-title"><span>📋</span> 通过条件</div>
+            <ul>
+              <li v-for="(c, i) in debateResult.final_decision.conditions" :key="i">{{ c }}</li>
+            </ul>
+          </div>
+
+          <div v-if="debateResult.final_decision.key_concerns && debateResult.final_decision.key_concerns.length" class="decision-concerns">
+            <div class="section-title"><span>⚠️</span> 关键风险</div>
+            <ul>
+              <li v-for="(c, i) in debateResult.final_decision.key_concerns" :key="i">{{ c }}</li>
+            </ul>
+          </div>
+
+          <div v-if="debateResult.final_decision.next_steps && debateResult.final_decision.next_steps.length" class="decision-steps">
+            <div class="section-title"><span>📅</span> 下一步行动</div>
+            <ul>
+              <li v-for="(s, i) in debateResult.final_decision.next_steps" :key="i">{{ s }}</li>
+            </ul>
+          </div>
+
+          <div v-if="debateResult.final_decision.summary" style="margin-top:16px;color:#94a3b8;font-size:0.9rem;line-height:1.6">
+            {{ debateResult.final_decision.summary }}
+          </div>
+
+          <div style="margin-top:16px;font-size:0.78rem;color:#64748b">
+            ⏱️ 分析耗时：{{ debateResult.total_time_seconds || '-' }}s · session: {{ debateResult.session_id }}
+          </div>
+        </div>
+      </div>
+
+      <div class="disclaimer">
+        ⚠️ 本分析由AI多Agent辩论系统生成，基于公开信息和AI推理，仅供决策参考，不构成专业投资或运营建议。
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createApp } = Vue;
+
+createApp({
+  data() {
+    return {
+      topic: '',
+      isRunning: false,
+      currentRound: 0,
+      debateResult: null,
+      round1Data: {},
+      round2Data: {},
+      agentStatus: {
+        r1_opp: null, r1_risk: null, r1_proscons: null, r1_comp: null
+      }
+    };
+  },
+  computed: {
+    riskScoreClass() {
+      const s = this.round1Data.risk_controller?.risk_score;
+      if (s === undefined || s === null) return 'yellow';
+      return s < 40 ? 'green' : s < 70 ? 'yellow' : 'red';
+    },
+    decisionClass() {
+      const d = this.debateResult?.final_decision?.decision;
+      if (d === 'STRONG-GO') return 'go';
+      if (d === 'CONDITIONAL-GO') return 'cond-go';
+      if (d === 'STOP') return 'stop';
+      return 'hold';
+    },
+    confidenceClass() {
+      const c = this.debateResult?.final_decision?.confidence || 0;
+      return c >= 70 ? 'high' : c >= 40 ? 'med' : 'low';
+    },
+    competitiveColor() {
+      const i = this.round1Data.competitive_analyst?.competitive_intensity;
+      if (i === '蓝海') return '#10b981';
+      if (i === '较低') return '#3b82f6';
+      if (i === '中等') return '#f59e0b';
+      return '#ef4444';
+    }
+  },
+  methods: {
+    async loadDemo() {
+      try {
+        const resp = await axios.get('http://localhost:8009/api/v1/debate/demo');
+        this.debateResult = resp.data;
+        this.round1Data = resp.data.round1 || {};
+        this.round2Data = resp.data.round2 || {};
+        this.currentRound = 3;
+        // Mark all as done
+        this.agentStatus = { r1_opp: 'done', r1_risk: 'done', r1_proscons: 'done', r1_comp: 'done' };
+      } catch (e) {
+        alert('演示模式需要后端运行：cd D:\\ZYY Project\\marketing-council\\backend && python -m uvicorn app.main:app --port 8009');
+      }
+    },
+    async startDebate() {
+      if (!this.topic.trim()) return;
+      this.isRunning = true;
+      this.debateResult = null;
+      this.round1Data = {};
+      this.round2Data = {};
+      this.agentStatus = { r1_opp: 'running', r1_risk: 'running', r1_proscons: 'running', r1_comp: 'running' };
+      this.currentRound = 1;
+
+      try {
+        const resp = await axios.post('http://localhost:8009/api/v1/debate', {
+          topic: this.topic,
+          stream: false
+        }, { timeout: 120000 });
+
+        this.debateResult = resp.data;
+        this.round1Data = resp.data.round1 || {};
+        this.round2Data = resp.data.round2 || {};
+        this.agentStatus = { r1_opp: 'done', r1_risk: 'done', r1_proscons: 'done', r1_comp: 'done' };
+        this.currentRound = 3;
+      } catch (e) {
+        alert('请求失败：' + (e.response?.data?.detail || e.message) + '\n\n请确保后端正在运行：\ncd D:\\ZYY Project\\marketing-council\\backend\npython -m uvicorn app.main:app --port 8009');
+        this.isRunning = false;
+        this.agentStatus = { r1_opp: null, r1_risk: null, r1_proscons: null, r1_comp: null };
+        this.currentRound = 0;
+      }
+    }
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+# ============================================
+# MarketingCouncil - 营销决策辩论团
+# 多Agent营销方案风险评估与可能性分析系统
+# ============================================
+
+# ---- LLM 配置（默认Spark，可切换Dify）----
+llm:
+  provider: "spark"  # spark | dify
+  model: "generalv3.5"
+  temperature: 0.7
+  max_tokens: 4096
+
+  dify:
+    enabled: false
+    api_url: "http://localhost/v1"
+    api_key: ""
+    workflow_id: ""
+    timeout: 60
+    expert_mapping:
+      opportunity_analyst: "市场机会专家"
+      risk_controller: "风险控制专家"
+      proscons_analyst: "优缺点分析专家"
+      devil_advocate: "反向思考专家"
+      competitive_analyst: "竞品环境专家"
+      strategy_synthesizer: "策略综合专家"
+
+# ---- 决策参数 ----
+decision:
+  # 机会评分阈值
+  opportunity_threshold: 60
+  # 风险可接受上限
+  risk_tolerance: 60
+  # 辩论轮次
+  debate_rounds: 3
+  # 置信度阈值（低于此值不给出决策）
+  confidence_threshold: 50
+
+# ---- Agent 专业领域配置 ----
+agents:
+  opportunity_analyst:
+    role: "市场机会分析师"
+    goal: "识别营销方案的市场空间、机会窗口、增长潜力"
+    backstory: |
+      你是一位资深的市场战略顾问，精通市场分析框架（STP、SWOT、PEST）。
+      你擅长从宏观市场趋势、细分赛道容量、竞争空白等角度评估机会。
+      你的分析必须基于具体数据而非猜测。
+    frameworks: ["PEST", "SWOT", "STP", "波特五力"]
+    output_schema: "opportunity_score, opportunity_points[], window_period, target_segment"
+
+  risk_controller:
+    role: "风险控制官"
+    goal: "评估营销方案的风险等级、威胁因素、潜在损失"
+    backstory: |
+      你是一位风险管理专家，曾任职于顶级咨询公司的风险管理部门。
+      你对任何营销方案都会从政策、资金、运营、声誉等多维度审视风险。
+      你是团队中的"乌鸦嘴"，专门负责发现最坏情况。
+    risk_categories: ["政策合规", "资金财务", "运营执行", "市场声誉", "技术安全"]
+    output_schema: "risk_level, risk_score, risk_items[{category, severity, probability, impact}]"
+
+  proscons_analyst:
+    role: "优缺点分析师"
+    goal: "量化分析营销方案的正面和负面因素"
+    backstory: |
+      你是一位商业决策顾问，擅长平衡计分卡和利弊分析。
+      你会用结构化的方式量化每个因素的重要性权重。
+      你客观中立，不偏袒任何一方。
+    output_schema: "pros[], cons[], net_score, recommendation"
+
+  devil_advocate:
+    role: "反向思考师"
+    goal: "故意唱反调，质疑假设，找出方案中的漏洞和盲区"
+    backstory: |
+      你是一位哲学思辨专家，专门从众人都忽视的角度提出质疑。
+      你不相信"显而易见"的结论，总是追问"如果...会怎样"。
+      你的价值在于发现最脆弱的假设。
+    questioning_angles: ["假设前提", "因果逻辑", "代表性偏差", "沉没成本", "路径依赖"]
+    output_schema: "challenges[], weakest_assumption, blind_spots[], unanswered_questions[]"
+
+  competitive_analyst:
+    role: "竞品环境分析师"
+    goal: "分析竞争格局、竞品动向、市场进入时机"
+    backstory: |
+      你是一位竞争情报专家，精通波特竞争战略。
+      你能从竞品反应、替代品威胁、进入壁垒等角度分析环境。
+      你对市场时机特别敏感，善于判断"窗口期"。
+    frameworks: ["波特五力", "竞争格局图", "竞品矩阵"]
+    output_schema: "competitive_intensity, competitive_threats[], timing_assessment, barrier_analysis"
+
+  strategy_synthesizer:
+    role: "策略综合官（决策主席）"
+    goal: "汇总所有Agent观点，输出最终决策建议"
+    backstory: |
+      你是一位企业战略总裁，曾主导过多个大型项目的决策。
+      你综合所有专家意见，权衡利弊，给出清晰的行动建议。
+      你的决策必须是可执行的，不能含糊其辞。
+    decision_labels: ["STRONG-GO", "CONDITIONAL-GO", "HOLD", "STOP"]
+    output_schema: "decision, confidence, summary, conditions[], key_concerns[], next_steps[]"
+
+# ---- 防幻觉配置 ----
+anti_hallucination:
+  confidence_threshold: 0.6
+  require_source: true
+  disclaimer: "⚠️ 本分析由AI多Agent辩论系统生成，基于公开信息和AI推理，仅供决策参考，不构成专业投资或运营建议。"
+
+# ---- 前端配置 ----
+frontend:
+  title: "营销决策辩论团"
+  subtitle: "MarketingCouncil - Multi-Agent Strategic Debate"
+  theme: "professional"
+  show_all_rounds: true
+  stream_animation: true
