@@ -1,3 +1,7 @@
+import sys
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+
 """
 ============================================
 MarketingCouncil - 营销决策辩论团
@@ -21,6 +25,7 @@ logger.add(
 
 # 导入路由
 from app.routers import debate
+from app.routers.marketing_v2 import router_v2
 
 app = FastAPI(
     title="MarketingCouncil - 营销决策辩论团",
@@ -41,6 +46,7 @@ app.add_middleware(
 
 # 注册路由
 app.include_router(debate.router)
+app.include_router(router_v2)
 
 
 @app.get("/")

@@ -1,5 +1,5 @@
 """
-🏛️ 策略综合官（决策主席）
+ 策略综合官（决策主席）
 汇总所有Agent观点，输出最终决策建议
 """
 
@@ -19,8 +19,13 @@ class StrategySynthesizer(MarketingBaseAgent):
         综合所有Agent的分析结果，输出最终决策
         """
         agent = self.create_agent()
+        from crewai import Task
         prompt = self._build_synthesis_prompt(topic, round1_outputs, round2_outputs or {})
-        raw = agent.agent_executor.invoke({"input": prompt})["output"]
+        task = Task(
+            description=prompt,
+            expected_output='JSON格式，包含 decision(STRONG-GO/CONDITIONAL-GO/HOLD/STOP), confidence(0-100), decision_reason, conditions(列表), key_concerns(列表), next_steps(列表), summary 字段',
+        )
+        raw = agent.execute_task(task)
         return self.parse_output(raw, {"topic": topic})
 
     def _build_synthesis_prompt(self, topic: str, round1: Dict[str, Any], round2: Dict[str, Any]) -> str:

@@ -25,8 +25,9 @@ class MarketingBaseAgent:
 
     def _load_config(self) -> Dict[str, Any]:
         import os
+        # config.yaml is at project root (two levels up from app/)
         config_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
             "config.yaml"
         )
         with open(config_path, "r", encoding="utf-8") as f:

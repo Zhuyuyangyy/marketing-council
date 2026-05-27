@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>营销辩论团 - SSE实时演示</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0a0e1a; --card: #111827; --border: #1e293b;
+      --blue: #3b82f6; --green: #10b981; --red: #ef4444;
+      --yellow: #f59e0b; --purple: #8b5cf6; --pink: #ec4899;
+      --text: #f1f5f9; --dim: #94a3b8;
+    }
+    body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    .hero { text-align: center; padding: 40px 20px; background: linear-gradient(180deg,rgba(59,130,246,0.06),transparent);
+      border-bottom: 1px solid var(--border); }
+    .hero h1 { font-size: 2rem; font-weight: 700; background: linear-gradient(135deg,#3b82f6,#8b5cf6,#ec4899);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero p { color: var(--dim); margin-top: 8px; }
+    .badge { display:inline-block; padding:4px 12px; background:rgba(59,130,246,0.15);
+      border:1px solid rgba(59,130,246,0.3); border-radius:20px; font-size:0.8rem; color:var(--blue); margin-top:12px; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+
+    .input-section { background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 24px; margin-bottom: 24px; }
+    .input-label { font-size: 0.85rem; color: var(--dim); margin-bottom: 10px; }
+    .topic-input { width: 100%; padding: 12px 16px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--text); font-size: 0.95rem; font-family: inherit;
+      resize: vertical; min-height: 80px; outline: none; transition: border-color 0.2s; }
+    .topic-input:focus { border-color: var(--blue); }
+    .btn-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+    button { padding: 10px 22px; border-radius: 10px; cursor: pointer; border: none;
+      font-size: 0.9rem; font-weight: 500; font-family: inherit; transition: all 0.2s; }
+    .btn-primary { background: linear-gradient(135deg,#3b82f6,#8b5cf6); color: white; }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-secondary { background: var(--card); color: var(--dim); border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: var(--blue); color: var(--blue); }
+    .btn-mock { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+    .btn-mock:hover { background: rgba(16,185,129,0.25); }
+
+    /* Agent Cards */
+    .agents-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .agent-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 18px; position: relative; overflow: hidden; transition: all 0.3s; }
+    .agent-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+    .agent-card.opp::before { background: linear-gradient(90deg,#3b82f6,#10b981); }
+    .agent-card.risk::before { background: linear-gradient(90deg,#ef4444,#f59e0b); }
+    .agent-card.proscons::before { background: linear-gradient(90deg,#10b981,#3b82f6); }
+    .agent-card.devil::before { background: linear-gradient(90deg,#8b5cf6,#ec4899); }
+    .agent-card.comp::before { background: linear-gradient(90deg,#f59e0b,#ef4444); }
+    .agent-card.synth::before { background: linear-gradient(90deg,#ec4899,#8b5cf6); }
+
+    .agent-card.streaming { animation: pulse-border 1.5s infinite; }
+    @keyframes pulse-border { 0%,100% { border-color: var(--border); } 50% { border-color: rgba(59,130,246,0.5); } }
+
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .card-role { font-weight: 600; font-size: 0.95rem; }
+    .card-badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 6px; }
+    .badge-run { background: rgba(59,130,246,0.15); color: var(--blue); }
+    .badge-done { background: rgba(16,185,129,0.15); color: var(--green); }
+    .badge-waiting { background: rgba(100,116,139,0.15); color: var(--dim); }
+
+    .score-display { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px;
+      background: var(--bg); border-radius: 8px; margin-bottom: 10px; }
+    .score-num { font-size: 1.4rem; font-weight: 700; }
+    .score-num.green { color: var(--green); } .score-num.red { color: var(--red); }
+    .score-num.yellow { color: var(--yellow); }
+    .score-label { font-size: 0.75rem; color: var(--dim); }
+
+    .result-text { font-size: 0.85rem; line-height: 1.6; color: var(--dim); }
+    .result-text ul { padding-left: 16px; }
+    .result-text li { margin-bottom: 3px; }
+    .result-text .positive { color: var(--green); }
+    .result-text .negative { color: var(--red); }
+
+    .streaming-text { font-size: 0.85rem; color: var(--blue); }
+    .streaming-text::after { content: '...'; animation: dots 1s infinite; }
+    @keyframes dots { 0%,20%{content:'.'} 40%{content:'..'} 60%,100%{content:'...'} }
+
+    /* Final Decision */
+    .final-section { background: linear-gradient(135deg,rgba(139,92,246,0.06),rgba(236,72,153,0.06));
+      border: 1px solid rgba(139,92,246,0.25); border-radius: 18px; padding: 28px; text-align: center; margin-bottom: 20px; }
+    .final-label { font-size: 0.85rem; color: var(--dim); margin-bottom: 8px; }
+    .final-value { font-size: 2.2rem; font-weight: 800; margin-bottom: 4px; }
+    .final-value.go { color: var(--green); }
+    .final-value.cond-go { color: var(--yellow); }
+    .final-value.hold { color: var(--blue); }
+    .final-value.stop { color: var(--red); }
+
+    .confidence-bar-wrap { max-width: 280px; margin: 14px auto; text-align: center; }
+    .confidence-label { font-size: 0.78rem; color: var(--dim); margin-bottom: 6px; }
+    .confidence-bar { height: 7px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+    .confidence-fill { height: 100%; border-radius: 4px; transition: width 1.2s ease; }
+    .confidence-fill.high { background: linear-gradient(90deg,#10b981,#3b82f6); }
+    .confidence-fill.med { background: linear-gradient(90deg,#f59e0b,#ef4444); }
+    .confidence-fill.low { background: var(--red); }
+
+    .final-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 12px; margin-top: 20px; text-align: left; }
+    .final-grid > div { background: rgba(0,0,0,0.2); border-radius: 10px; padding: 14px; }
+    .final-section-title { font-size: 0.78rem; font-weight: 600; color: var(--dim); margin-bottom: 8px;
+      text-transform: uppercase; letter-spacing: 0.05em; }
+    .final-section-title span { color: var(--purple); }
+    .final-grid ul { padding-left: 16px; font-size: 0.85rem; }
+    .final-grid li { margin-bottom: 5px; color: var(--text); line-height: 1.5; }
+    .final-summary { margin-top: 18px; font-size: 0.88rem; color: var(--dim); line-height: 1.7;
+      padding: 14px; background: rgba(0,0,0,0.2); border-radius: 10px; }
+    .final-meta { margin-top: 14px; font-size: 0.78rem; color: #64748b; }
+
+    .mode-indicator { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px;
+      border-radius: 20px; font-size: 0.8rem; margin-bottom: 16px; }
+    .mode-indicator.mock { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+    .mode-indicator.live { background: rgba(59,130,246,0.15); color: var(--blue); border: 1px solid rgba(59,130,246,0.3); }
+    .mode-indicator.sse { background: rgba(139,92,246,0.15); color: var(--purple); border: 1px solid rgba(139,92,246,0.3); }
+
+    .connection-status { font-size: 0.8rem; color: var(--dim); margin-top: 8px; }
+    .connection-status.connected { color: var(--green); }
+    .connection-status.error { color: var(--red); }
+
+    /* Demo Topics */
+    .demo-topics { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+    .demo-topic { padding: 5px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+      font-size: 0.78rem; color: var(--dim); cursor: pointer; transition: all 0.2s; }
+    .demo-topic:hover { border-color: var(--blue); color: var(--blue); }
+
+    .footer { text-align: center; font-size: 0.75rem; color: var(--dim); padding: 20px;
+      border-top: 1px solid var(--border); margin-top: 30px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="hero">
+    <h1>🏛️ 营销决策辩论团</h1>
+    <p>6专业Agent · 3轮辩论 · 实时SSE流式输出</p>
+    <span class="badge">讯飞星火 Spark API · Mock模式可用</span>
+  </div>
+
+  <div class="container">
+    <!-- Mode Indicator -->
+    <div style="text-align:center">
+      <div class="mode-indicator" :class="mode">
+        <span v-if="mode==='mock'">🎭</span>
+        <span v-else-if="mode==='sse'">⚡</span>
+        <span v-else>🔗</span>
+        {{ modeText }}
+      </div>
+      <div class="connection-status" :class="{connected: wsConnected, error: wsError}">
+        <span v-if="mode==='sse'">{{ wsConnected ? 'SSE连接中...' : wsError ? 'SSE连接失败' : '准备就绪' }}</span>
+        <span v-else-if="mode==='mock'">Mock模式: 不需要后端服务</span>
+        <span v-else>后端: http://localhost:8009</span>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="input-section">
+      <div class="input-label">输入营销方案或决策问题</div>
+      <textarea class="topic-input" v-model="topic" placeholder="例如：在三四线城市推广一款智能家居产品，主打中老年群体，预算50万，周期6个月..."></textarea>
+      <div class="btn-row">
+        <button class="btn btn-primary" @click="startDebateSSE" :disabled="isRunning || !topic.trim()">
+          {{ isRunning ? '⚡ 分析中...' : '🚀 SSE实时辩论' }}
+        </button>
+        <button class="btn btn-secondary" @click="startMockDemo">🎭 Mock演示</button>
+        <button class="btn btn-mock" @click="loadBackendDemo">📡 后端演示</button>
+      </div>
+      <div class="demo-topics">
+        <span style="font-size:0.8rem;color:var(--dim);margin-right:4px">示例:</span>
+        <span class="demo-topic" v-for="t in demoTopics" :key="t" @click="topic=t">{{ t.slice(0,12) }}...</span>
+      </div>
+    </div>
+
+    <!-- Agent Cards -->
+    <div class="agents-grid">
+      <div class="agent-card opp" :class="{streaming: status.opp==='running'}">
+        <div class="card-header">
+          <span class="card-role">🎯 机会分析师</span>
+          <span class="card-badge" :class="badgeClass('opp')">{{ badgeText('opp') }}</span>
+        </div>
+        <div v-if="results.opp">
+          <div class="score-display"><span class="score-num green">{{ results.opp.score }}</span><span class="score-label">机会评分</span></div>
+          <div class="result-text"><ul><li v-for="(p,i) in results.opp.points" :key="i">{{ p }}</li></ul></div>
+        </div>
+        <div v-else-if="status.opp==='running'" class="streaming-text">AI分析中</div>
+        <div v-else style="font-size:0.82rem;color:var(--dim)">等待分析...</div>
+      </div>
+
+      <div class="agent-card risk" :class="{streaming: status.risk==='running'}">
+        <div class="card-header">
+          <span class="card-role">⚠️ 风险控制官</span>
+          <span class="card-badge" :class="badgeClass('risk')">{{ badgeText('risk') }}</span>
+        </div>
+        <div v-if="results.risk">
+          <div class="score-display"><span class="score-num" :class="riskClass">{{ results.risk.score }}</span><span class="score-label">风险评分</span></div>
+          <div class="result-text"><ul><li v-for="(r,i) in results.risk.items" :key="i"><strong>{{ r.cat }}</strong>: {{ r.impact }}</li></ul></div>
+        </div>
+        <div v-else-if="status.risk==='running'" class="streaming-text">AI分析中</div>
+        <div v-else style="font-size:0.82rem;color:var(--dim)">等待分析...</div>
+      </div>
+
+      <div class="agent-card proscons" :class="{streaming: status.proscons==='running'}">
+        <div class="card-header">
+          <span class="card-role">⚖️ 优缺点分析师</span>
+          <span class="card-badge" :class="badgeClass('proscons')">{{ badgeText('proscons') }}</span>
+        </div>
+        <div v-if="results.proscons">
+          <div class="score-display"><span class="score-num" :class="results.proscons.net>=0?'green':'red'">{{ results.proscons.net>=0?'+':'' }}{{ results.proscons.net }}</span><span class="score-label">净得分</span></div>
+          <div class="result-text">
+            <div class="positive">✅ {{ results.proscons.pros.join('、') }}</div>
+            <div class="negative" style="margin-top:4px">❌ {{ results.proscons.cons.join('、') }}</div>
+          </div>
+        </div>
+        <div v-else-if="status.proscons==='running'" class="streaming-text">AI分析中</div>
+        <div v-else style="font-size:0.82rem;color:var(--dim)">等待分析...</div>
+      </div>
+
+      <div class="agent-card comp" :class="{streaming: status.comp==='running'}">
+        <div class="card-header">
+          <span class="card-role">📊 竞品环境分析师</span>
+          <span class="card-badge" :class="badgeClass('comp')">{{ badgeText('comp') }}</span>
+        </div>
+        <div v-if="results.comp">
+          <div class="result-text">
+            竞争强度: <strong :style="{color: compColor}">{{ results.comp.intensity }}</strong><br>
+            时机: {{ results.comp.timing }}<br>
+            <span style="font-size:0.8rem">{{ results.comp.window }}</span>
+          </div>
+        </div>
+        <div v-else-if="status.comp==='running'" class="streaming-text">AI分析中</div>
+        <div v-else style="font-size:0.82rem;color:var(--dim)">等待分析...</div>
+      </div>
+
+      <div class="agent-card devil" :class="{streaming: status.devil==='running'}">
+        <div class="card-header">
+          <span class="card-role">😈 反向思考师</span>
+          <span class="card-badge" :class="badgeClass('devil')">{{ badgeText('devil') }}</span>
+        </div>
+        <div v-if="results.devil">
+          <div class="result-text">
+            <div style="margin-bottom:6px"><strong style="color:#ec4899">💀 最脆弱假设:</strong> {{ results.devil.weak }}</div>
+            <div><strong style="color:#f59e0b">⚡ 质疑:</strong> {{ results.devil.questions.join('；') }}；</div>
+          </div>
+        </div>
+        <div v-else-if="status.devil==='running'" class="streaming-text">AI质疑中</div>
+        <div v-else style="font-size:0.82rem;color:var(--dim)">等待交叉辩论...</div>
+      </div>
+
+      <div class="agent-card synth" :class="{streaming: status.synth==='running'}">
+        <div class="card-header">
+          <span class="card-role">🏛️ 策略综合官</span>
+          <span class="card-badge" :class="badgeClass('synth')">{{ badgeText('synth') }}</span>
+        </div>
+        <div v-if="finalDecision">
+          <div class="final-value" :class="decisionClass">{{ finalDecision.decision }}</div>
+          <div style="font-size:0.85rem;color:var(--dim)">置信度 {{ finalDecision.confidence }}%</div>
+        </div>
+        <div v-else-if="status.synth==='running'" class="streaming-text">AI综合决策中</div>
+        <div v-else style="font-size:0.82rem;color:var(--dim)">等待最终决策...</div>
+      </div>
+    </div>
+
+    <!-- Final Decision -->
+    <div v-if="finalDecision" class="final-section">
+      <div class="final-label">🏛️ 策略综合官 · 最终决策</div>
+      <div class="final-value" :class="decisionClass">{{ finalDecision.decision }}</div>
+      <div class="confidence-bar-wrap">
+        <div class="confidence-label">置信度 {{ finalDecision.confidence }}%</div>
+        <div class="confidence-bar">
+          <div class="confidence-fill" :class="confClass" :style="{width: finalDecision.confidence + '%'}"></div>
+        </div>
+      </div>
+      <div class="final-grid">
+        <div v-if="finalDecision.conditions?.length">
+          <div class="final-section-title"><span>📋</span> 通过条件</div>
+          <ul><li v-for="(c,i) in finalDecision.conditions" :key="i">{{ c }}</li></ul>
+        </div>
+        <div v-if="finalDecision.concerns?.length">
+          <div class="final-section-title"><span>⚠️</span> 关键风险</div>
+          <ul><li v-for="(c,i) in finalDecision.concerns" :key="i">{{ c }}</li></ul>
+        </div>
+        <div v-if="finalDecision.steps?.length">
+          <div class="final-section-title"><span>📅</span> 下一步</div>
+          <ul><li v-for="(s,i) in finalDecision.steps" :key="i">{{ s }}</li></ul>
+        </div>
+      </div>
+      <div v-if="finalDecision.summary" class="final-summary">{{ finalDecision.summary }}</div>
+      <div class="final-meta">⏱️ {{ totalTime }}s · session: {{ sessionId }}</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    营销决策辩论团 · 基于讯飞星火Spark API · 支持Mock模式 · <a href="frontend/index.html" style="color:var(--blue)">完整版前端</a>
+  </div>
+</div>
+
+<script>
+const { createApp } = Vue;
+
+createApp({
+  data() {
+    return {
+      topic: '',
+      mode: 'mock',  // mock | sse | live
+      isRunning: false,
+      wsConnected: false,
+      wsError: false,
+      ws: null,
+      eventSource: null,
+      sessionId: '',
+      totalTime: 0,
+      startTime: 0,
+      results: {},
+      finalDecision: null,
+      status: { opp: null, risk: null, proscons: null, comp: null, devil: null, synth: null },
+      demoTopics: [
+        '抖音电商美妆新品推广',
+        '智能家居三四线城市推广',
+        '新能源汽⻋下沉市场营销',
+        '在线教育APP增长策略',
+        '咖啡品牌年轻白领市场'
+      ]
+    };
+  },
+  computed: {
+    modeText() {
+      return { mock: 'Mock演示模式 (无需API)', sse: 'SSE实时流式', live: '后端同步模式' }[this.mode] || '';
+    },
+    riskClass() {
+      const s = this.results.risk?.score;
+      if (s === undefined) return 'yellow';
+      return s < 40 ? 'green' : s < 70 ? 'yellow' : 'red';
+    },
+    decisionClass() {
+      const d = this.finalDecision?.decision;
+      if (d === 'STRONG-GO') return 'go';
+      if (d === 'CONDITIONAL-GO') return 'cond-go';
+      if (d === 'STOP') return 'stop';
+      return 'hold';
+    },
+    confClass() {
+      const c = this.finalDecision?.confidence || 0;
+      return c >= 70 ? 'high' : c >= 40 ? 'med' : 'low';
+    },
+    compColor() {
+      const i = this.results.comp?.intensity;
+      return { '蓝海': '#10b981', '较低': '#3b82f6', '中等': '#f59e0b', '激烈': '#ef4444' }[i] || '#94a3b8';
+    }
+  },
+  methods: {
+    badgeClass(agent) {
+      const s = this.status[agent];
+      if (s === 'done') return 'badge-done';
+      if (s === 'running') return 'badge-run';
+      return 'badge-waiting';
+    },
+    badgeText(agent) {
+      const s = this.status[agent];
+      if (s === 'done') return '✓ 完成';
+      if (s === 'running') return '⚡ 分析中';
+      return '○ 等待';
+    },
+
+    // ============ Mock Demo (Self-contained, no backend) ============
+    startMockDemo() {
+      this._reset();
+      this.mode = 'mock';
+      this.isRunning = true;
+      const steps = [
+        () => this._mockOpp(),      // 800ms
+        () => this._mockRisk(),     // 1200ms
+        () => this._mockProscons(), // 600ms
+        () => this._mockComp(),     // 900ms
+        () => this._mockDevil(),    // 1500ms
+        () => this._mockSynth(),    // 1000ms
+      ];
+      let delay = 300;
+      steps.forEach((fn, i) => {
+        setTimeout(() => {
+          this.status[Object.keys(this.status)[i]] = 'running';
+          setTimeout(fn, 800 + Math.random() * 400);
+        }, delay);
+        delay += 600 + Math.random() * 300;
+      });
+    },
+
+    _mockOpp() {
+      this.results.opp = { score: 78, points: ['细分市场年增⻓23%，窗口期约6个月', '抖音日活8亿，流量红利仍在', 'KOC种草策略ROI预期3.2x'] };
+      this.status.opp = 'done';
+    },
+    _mockRisk() {
+      this.results.risk = { score: 52, items: [{ cat: '政策合规', impact: '广告法功效宣称限制' }, { cat: '资金财务', impact: '冷启动流量成本超预期' }] };
+      this.status.risk = 'done';
+    },
+    _mockProscons() {
+      this.results.proscons = { pros: ['流量红利明显', '目标用户活跃度高', '种草+转化闭环完整'], cons: ['竞争激烈获客成本高', '品牌认知度低初期转化难'], net: 15 };
+      this.status.proscons = 'done';
+    },
+    _mockComp() {
+      this.results.comp = { intensity: '激烈', timing: '窗口开放', window: '约4个月后窗口关闭' };
+      this.status.comp = 'done';
+    },
+    _mockDevil() {
+      this.results.devil = { weak: 'GMV增长假设过于乐观', questions: ['如果达人翻⻋怎么办？', '供应链能否支撑爆款峰值？', '竞品已提前2个月布局'] };
+      this.status.devil = 'done';
+    },
+    _mockSynth() {
+      this.status.synth = 'running';
+      setTimeout(() => {
+        this.finalDecision = {
+          decision: 'CONDITIONAL-GO',
+          confidence: 73,
+          conditions: ['通过合规审查（特别是功效宣称）', '首期预算降低30%试水', '建立达人翻⻋应急预案'],
+          concerns: ['合规⻛险', '冷启动期ROI压力', '供应链峰值承载能力'],
+          steps: ['1. 法务合规审查（1周）', '2. 选定3-5位KOC小规模测试（2周）', '3. 根据测试ROI决定是否扩大投放'],
+          summary: '美妆新品抖音推广有机会但⻛险中等，建议小步快跑、迭代验证。'
+        };
+        this.status.synth = 'done';
+        this.totalTime = 8.5;
+        this.sessionId = 'mock-' + Math.random().toString(36).slice(2, 10);
+        this.isRunning = false;
+      }, 1000);
+    },
+
+    // ============ SSE Real-time Debate ============
+    async startDebateSSE() {
+      if (!this.topic.trim()) return;
+      this._reset();
+      this.mode = 'sse';
+      this.isRunning = true;
+      this.startTime = Date.now();
+
+      try {
+        const resp = await fetch('http://localhost:8009/api/v1/debate/stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic: this.topic, stream: true }),
+        });
+
+        if (!resp.ok) throw new Error('Backend not available');
+        this.wsConnected = true;
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+              const event = JSON.parse(line.slice(6));
+              this._processSSEEvent(event);
+            } catch {}
+          }
+        }
+      } catch (e) {
+        this.mode = 'mock';
+        this.wsError = true;
+        this.startMockDemo();
+      }
+    },
+
+    _processSSEEvent(event) {
+      const { event: ev, round, agent, result } = event;
+      if (ev === 'agent_start') {
+        const key = this._agentKey(agent, round);
+        if (key) this.status[key] = 'running';
+      } else if (ev === 'agent_complete') {
+        const key = this._agentKey(agent, round);
+        if (key) { this.status[key] = 'done'; this._mergeResult(key, result); }
+      } else if (ev === 'final_decision') {
+        this.finalDecision = result;
+      } else if (ev === 'debate_complete') {
+        this.totalTime = (event.total_time || (Date.now() - this.startTime) / 1000).toFixed(1);
+        this.sessionId = this.sessionId || 'sse-' + Date.now();
+        this.isRunning = false;
+        this.wsConnected = false;
+      } else if (ev === 'round_start') {
+        // Just log for now
+      }
+    },
+
+    _agentKey(agent, round) {
+      const map = {
+        'opportunity_analyst': 'opp', 'risk_controller': 'risk',
+        'proscons_analyst': 'proscons', 'competitive_analyst': 'comp',
+        'devil_advocate': 'devil'
+      };
+      return map[agent];
+    },
+
+    _mergeResult(key, result) {
+      if (!result) return;
+      if (key === 'opp') {
+        this.results.opp = {
+          score: result.opportunity_score || result.score || 0,
+          points: result.opportunity_points || result.points || []
+        };
+      } else if (key === 'risk') {
+        this.results.risk = {
+          score: result.risk_score || 0,
+          items: (result.risk_items || []).map(r => ({ cat: r.category || '', impact: r.impact || '' }))
+        };
+      } else if (key === 'proscons') {
+        this.results.proscons = {
+          pros: (result.pros || []).map(p => p.title || p),
+          cons: (result.cons || []).map(c => c.title || c),
+          net: result.net_score || 0
+        };
+      } else if (key === 'comp') {
+        this.results.comp = {
+          intensity: result.competitive_intensity || '',
+          timing: result.timing_assessment?.window_status || '',
+          window: result.timing_assessment?.window_closing_time ? `约${result.timing_assessment.window_closing_time}后窗口关闭` : ''
+        };
+      } else if (key === 'devil') {
+        this.results.devil = {
+          weak: result.weakest_assumption || '',
+          questions: (result.challenges || []).map(c => c.question || c)
+        };
+      }
+    },
+
+    // ============ Backend Demo (Non-streaming) ============
+    async loadBackendDemo() {
+      try {
+        const resp = await axios.get('http://localhost:8009/api/v1/debate/demo');
+        this._reset();
+        this.mode = 'live';
+        this.results = {
+          opp: { score: resp.data.round1?.opportunity_analyst?.opportunity_score, points: resp.data.round1?.opportunity_analyst?.opportunity_points || [] },
+          risk: { score: resp.data.round1?.risk_controller?.risk_score, items: resp.data.round1?.risk_controller?.risk_items || [] },
+          proscons: { pros: resp.data.round1?.proscons_analyst?.pros?.map(p => p.title || p) || [], cons: resp.data.round1?.proscons_analyst?.cons?.map(c => c.title || c) || [], net: resp.data.round1?.proscons_analyst?.net_score || 0 },
+          comp: { intensity: resp.data.round1?.competitive_analyst?.competitive_intensity, timing: resp.data.round1?.competitive_analyst?.timing_assessment?.window_status || '', window: '' },
+          devil: { weak: resp.data.round2?.devil_advocate?.weakest_assumption || '', questions: resp.data.round2?.devil_advocate?.challenges?.map(c => c.question) || [] }
+        };
+        this.finalDecision = resp.data.final_decision;
+        this.sessionId = resp.data.session_id;
+        this.totalTime = resp.data.total_time_seconds;
+        this.status = { opp: 'done', risk: 'done', proscons: 'done', comp: 'done', devil: 'done', synth: 'done' };
+      } catch (e) {
+        this.startMockDemo();
+      }
+    },
+
+    _reset() {
+      this.results = {};
+      this.finalDecision = null;
+      this.status = { opp: null, risk: null, proscons: null, comp: null, devil: null, synth: null };
+      this.sessionId = '';
+      this.totalTime = 0;
+      this.isRunning = false;
+      this.wsConnected = false;
+      this.wsError = false;
+      if (this.eventSource) { this.eventSource.close(); this.eventSource = null; }
+      if (this.ws) { this.ws.close(); this.ws = null; }
+    }
+  },
+  mounted() {
+    // Auto-load mock demo on open
+    // this.startMockDemo();
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

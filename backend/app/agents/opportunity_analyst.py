@@ -1,5 +1,5 @@
 """
-🎯 市场机会分析师
+市场机会分析师
 识别营销方案的市场空间、机会窗口、增长潜力
 """
 
@@ -28,11 +28,12 @@ class OpportunityAnalyst(MarketingBaseAgent):
         }
         """
         agent = self.create_agent()
-        prompt = self._build_prompt(topic, context or {})
-
-        raw = agent.agent_executor.invoke({
-            "input": prompt
-        })["output"]
+        from crewai import Task
+        task = Task(
+            description=self._build_prompt(topic, context or {}),
+            expected_output='JSON格式，包含 opportunity_score(0-100), opportunity_points(列表), window_period, target_segment, market_size, growth_potential 字段',
+        )
+        raw = agent.execute_task(task)
 
         return self.parse_output(raw, {"topic": topic, **context})
 
@@ -71,13 +72,36 @@ class OpportunityAnalyst(MarketingBaseAgent):
 
     def parse_output(self, raw_output: str, context: Dict[str, Any]) -> Dict[str, Any]:
         import json, re
-        # 尝试提取JSON
-        match = re.search(r'\{[^{}]*"opportunity_score"[^{}]*\}', raw_output, re.DOTALL)
-        if match:
+        # 尝试从多行JSON中提取完整对象（支持嵌套结构）
+        # 策略：找到 opportunity_score 所在行，向前后扩展找配对的大括号
+        try:
+            # 先尝试直接 parse 整个 raw_output
             try:
-                return json.loads(match.group())
+                data = json.loads(raw_output)
+                if "opportunity_score" in data:
+                    data["agent"] = self.role
+                    return data
             except json.JSONDecodeError:
                 pass
+
+            # 尝试找到 JSON 块（从 { 到最后 }）
+            start = raw_output.find('{"')
+            if start == -1:
+                start = raw_output.find('{')
+            if start != -1:
+                # 从找到的 { 开始，尝试增长式解析
+                for end in range(len(raw_output), start, -1):
+                    try:
+                        candidate = raw_output[start:end]
+                        data = json.loads(candidate)
+                        if "opportunity_score" in data:
+                            data["agent"] = self.role
+                            return data
+                    except json.JSONDecodeError:
+                        continue
+        except Exception:
+            pass
+
         return {
             "opportunity_score": 50,
             "opportunity_points": [],

@@ -1,5 +1,5 @@
 """
-⚖️ 优缺点分析师
+ 优缺点分析师
 量化分析营销方案的正面和负面因素
 """
 
@@ -16,8 +16,12 @@ class ProsConsAnalyst(MarketingBaseAgent):
 
     def analyze(self, topic: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         agent = self.create_agent()
-        prompt = self._build_prompt(topic, context or {})
-        raw = agent.agent_executor.invoke({"input": prompt})["output"]
+        from crewai import Task
+        task = Task(
+            description=self._build_prompt(topic, context or {}),
+            expected_output='JSON格式，包含 pros(列表), cons(列表), net_score(正数表示利大于弊), key_insight 字段',
+        )
+        raw = agent.execute_task(task)
         return self.parse_output(raw, {"topic": topic, **context})
 
     def _build_prompt(self, topic: str, context: Dict[str, Any]) -> str:

@@ -88,8 +88,17 @@ async def create_debate(request: DebateRequest):
     if not request.topic.strip():
         raise HTTPException(status_code=400, detail="topic不能为空")
 
-    orchestrator = DebateOrchestrator()
-    result = await orchestrator.run_debate(request.topic)
+    try:
+        orchestrator = DebateOrchestrator()
+        result = orchestrator.run_debate(request.topic)
+    except Exception as e:
+        import traceback, os
+        log_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'debate_error.log')
+        with open(log_path, 'a', encoding='utf-8') as f:
+            f.write(f'=== {datetime.now().isoformat()} ===\n')
+            f.write(traceback.format_exc())
+            f.write('\n')
+        raise HTTPException(status_code=500, detail=f"辩论引擎异常: {type(e).__name__}: {str(e)}")
 
     return DebateResponse(
         session_id=result["session_id"],

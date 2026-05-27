@@ -1,5 +1,5 @@
 """
-😈 反向思考师
+ 反向思考师
 故意唱反调，质疑假设，找出方案中的漏洞和盲区
 """
 
@@ -18,8 +18,12 @@ class DevilAdvocate(MarketingBaseAgent):
         agent = self.create_agent()
         # 如果有其他Agent的结论，作为质疑素材
         other_outputs = context.get("other_agent_outputs", {}) if context else {}
-        prompt = self._build_prompt(topic, other_outputs)
-        raw = agent.agent_executor.invoke({"input": prompt})["output"]
+        from crewai import Task
+        task = Task(
+            description=self._build_prompt(topic, other_outputs),
+            expected_output='JSON格式，包含 challenges(列表), assumptions(列表), blind_spots(列表) 字段',
+        )
+        raw = agent.execute_task(task)
         return self.parse_output(raw, {"topic": topic})
 
     def _build_prompt(self, topic: str, other_outputs: Dict[str, Any]) -> str:

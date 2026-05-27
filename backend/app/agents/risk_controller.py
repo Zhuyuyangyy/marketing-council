@@ -1,5 +1,5 @@
 """
-⚠️ 风险控制官
+ 风险控制官
 评估营销方案的风险等级、威胁因素、潜在损失
 """
 
@@ -16,8 +16,12 @@ class RiskController(MarketingBaseAgent):
 
     def analyze(self, topic: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         agent = self.create_agent()
-        prompt = self._build_prompt(topic, context or {})
-        raw = agent.agent_executor.invoke({"input": prompt})["output"]
+        from crewai import Task
+        task = Task(
+            description=self._build_prompt(topic, context or {}),
+            expected_output='JSON格式，包含 risk_score(0-100), risk_items(列表), risk_categories, potential_loss, mitigation_measures 字段',
+        )
+        raw = agent.execute_task(task)
         return self.parse_output(raw, {"topic": topic, **context})
 
     def _build_prompt(self, topic: str, context: Dict[str, Any]) -> str:
