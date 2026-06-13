@@ -56,9 +56,17 @@ class ProsConsAnalyst(MarketingBaseAgent):
 ⚠️ 客观中立，不要夸大优点或缺点。"""
 
     def parse_output(self, raw_output: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        data = self.extract_json(raw_output)
+        if data and ("pros" in data or "net_score" in data):
+            data.setdefault("pros", [])
+            data.setdefault("cons", [])
+            data["raw"] = raw_output
+            data["agent"] = self.role
+            return data
+
+        # Fallback: regex extraction
         net_match = re.search(r'"net_score"\s*:\s*(-?\d+)', raw_output)
         verdict_match = re.search(r'"net_verdict"\s*:\s*"([^"]+)"', raw_output)
-        pros_match = re.findall(r'"title"\s*:\s*"([^"]+)"', raw_output[:1000])
         return {
             "pros": [],
             "cons": [],

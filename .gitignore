@@ -7,4 +7,6 @@ build/
 venv/
 .env
 .pytest_cache/
-docs/
+htmlcov/
+coverage.xml
+*.cover

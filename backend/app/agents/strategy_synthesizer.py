@@ -85,6 +85,17 @@ class StrategySynthesizer(MarketingBaseAgent):
 ⚠️ 作为主席，你的决策必须清晰、可执行。不要说"见仁见智"这种废话。"""
 
     def parse_output(self, raw_output: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        data = self.extract_json(raw_output)
+        if data and "decision" in data:
+            data.setdefault("conditions", [])
+            data.setdefault("key_concerns", [])
+            data.setdefault("next_steps", [])
+            data.setdefault("summary", "")
+            data["raw"] = raw_output
+            data["agent"] = self.role
+            return data
+
+        # Fallback: regex extraction
         decision_match = re.search(r'"decision"\s*:\s*"([^"]+)"', raw_output)
         confidence_match = re.search(r'"confidence"\s*:\s*(\d+)', raw_output)
         conditions_match = re.findall(r'"conditions"\s*:\s*\[([^\]]+)\]', raw_output)

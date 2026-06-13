@@ -69,6 +69,16 @@ class DevilAdvocate(MarketingBaseAgent):
 ⚠️ 你是"魔鬼代言人"，不要留情面，把最难听的问题问出来！"""
 
     def parse_output(self, raw_output: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        data = self.extract_json(raw_output)
+        if data and ("challenges" in data or "weakest_assumption" in data):
+            data.setdefault("challenges", [])
+            data.setdefault("blind_spots", [])
+            data.setdefault("unanswerable_questions", [])
+            data["raw"] = raw_output
+            data["agent"] = self.role
+            return data
+
+        # Fallback: regex extraction
         weakest_match = re.search(r'"weakest_assumption"\s*:\s*"([^"]+)"', raw_output)
         failure_match = re.search(r'"probable_failure_reason"\s*:\s*"([^"]+)"', raw_output)
         return {

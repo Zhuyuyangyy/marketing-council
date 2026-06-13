@@ -1,5 +1,5 @@
 # marketing-council Dependencies
-# Generated from import analysis on 2026-05-27
+# Last updated: 2026-05-29
 
 # AI/LLM Framework
 crewai>=0.28.0
@@ -7,6 +7,7 @@ langchain-core>=0.1.0
 
 # Web Framework
 fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
 httpx>=0.26.0
 
 # Data Processing
@@ -17,5 +18,11 @@ python-dotenv>=1.0.0
 # Logging
 loguru>=0.7.2
 
-# Testing
+# Testing & Quality
 pytest>=8.0.0
+pytest-cov>=4.1.0
+pytest-asyncio>=0.23.0
+ruff>=0.3.0
+
+# Type checking (optional)
+mypy>=1.8.0

@@ -64,6 +64,13 @@ class RiskController(MarketingBaseAgent):
 ⚠️ 你是团队中的"乌鸦嘴"，不要回避坏消息，要把风险说透。"""
 
     def parse_output(self, raw_output: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        data = self.extract_json(raw_output)
+        if data and "risk_score" in data:
+            data["raw"] = raw_output
+            data["agent"] = self.role
+            return data
+
+        # Fallback: regex extraction
         match = re.search(r'\[[\s\S]*?"category"[\s\S]*?\]', raw_output)
         risk_items = []
         if match:

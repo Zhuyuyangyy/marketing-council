@@ -16,6 +16,15 @@ import argparse
 import time
 import json
 
+# Fix Windows GBK encoding for emoji output
+if sys.platform == "win32":
+    os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except AttributeError:
+        pass
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "backend"))
 
 

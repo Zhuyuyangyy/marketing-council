@@ -69,6 +69,16 @@ class CompetitiveAnalyst(MarketingBaseAgent):
 ⚠️ 时机判断要具体，不要说"时机不错"这种废话。"""
 
     def parse_output(self, raw_output: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        data = self.extract_json(raw_output)
+        if data and "competitive_intensity" in data:
+            data.setdefault("competitive_threats", [])
+            data.setdefault("barrier_analysis", {})
+            data.setdefault("timing_assessment", {})
+            data["raw"] = raw_output
+            data["agent"] = self.role
+            return data
+
+        # Fallback: regex extraction
         intensity_match = re.search(r'"competitive_intensity"\s*:\s*"([^"]+)"', raw_output)
         timing_match = re.search(r'"is_good_timing"\s*:\s*(true|false)', raw_output)
         window_match = re.search(r'"window_status"\s*:\s*"([^"]+)"', raw_output)
