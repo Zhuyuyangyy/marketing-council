@@ -8,8 +8,8 @@ import time
 from urllib.parse import urlparse
 
 app_id = 'a2658974'
-api_key = 'MWExN2NiNDIwNzZiZGI0OGU1YzJhOWFl'
-api_secret = 'f3e4c5df61056d82b1df8af0bbc09f53'
+api_key = 'YOUR-SPARK-API-KEY'
+api_secret = 'YOUR-SPARK-API-SECRET'
 url = 'https://spark-api.xf-yun.com/v3.5/chat'
 
 # Generate auth
